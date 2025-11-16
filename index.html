@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setun - Ternary Computer Emulator</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>SETUN</h1>
+            <p class="subtitle">Balanced Ternary Computer Emulator</p>
+        </header>
+
+        <div class="main-grid">
+            <!-- Left Panel: Editor and Controls -->
+            <div class="editor-panel">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Program Editor</h2>
+                        <div class="editor-controls">
+                            <select id="examplesSelect" class="examples-dropdown">
+                                <option value="">Load Example...</option>
+                                <option value="addition">Addition</option>
+                                <option value="multiplication">Multiplication</option>
+                                <option value="conditional">Conditional</option>
+                            </select>
+                            <button id="saveBtn" class="btn btn-secondary" title="Save Program">
+                                <span class="icon">💾</span>
+                            </button>
+                        </div>
+                    </div>
+                    <textarea id="programEditor" class="program-editor" placeholder="Enter your Setun program here...
+Use balanced ternary: - (minus/−1), 0 (zero), + (plus/+1)
+Example: +0- means +1, 0, -1"></textarea>
+                    <div id="syntaxError" class="error-message hidden"></div>
+                </div>
+
+                <div class="card controls-card">
+                    <h2>Execution Controls</h2>
+                    <div class="controls-group">
+                        <button id="runBtn" class="btn btn-primary" title="Run Program">
+                            <span class="icon">▶</span> Run
+                        </button>
+                        <button id="stepBtn" class="btn btn-primary" title="Step One Instruction">
+                            <span class="icon">→</span> Step
+                        </button>
+                        <button id="pauseBtn" class="btn btn-secondary hidden" title="Pause Execution">
+                            <span class="icon">⏸</span> Pause
+                        </button>
+                        <button id="resetBtn" class="btn btn-secondary" title="Reset Computer">
+                            <span class="icon">↻</span> Reset
+                        </button>
+                    </div>
+                    <div class="speed-control">
+                        <label for="speedSlider">Speed:</label>
+                        <input type="range" id="speedSlider" min="1" max="10" value="5" class="slider">
+                        <span id="speedLabel">5x</span>
+                    </div>
+                    <div class="status-bar">
+                        <span class="label">Status:</span>
+                        <span id="statusBadge" class="badge badge-idle">Idle</span>
+                        <span id="instructionCount" class="instruction-count">Instructions: 0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Visualization -->
+            <div class="visualization-panel">
+                <div class="card">
+                    <h2>Registers</h2>
+                    <div class="registers-grid">
+                        <div class="register-item" id="registerACC">
+                            <div class="register-label">Accumulator</div>
+                            <div class="register-value">
+                                <span class="ternary-value">0</span>
+                                <span class="decimal-value">(0)</span>
+                            </div>
+                        </div>
+                        <div class="register-item" id="registerPC">
+                            <div class="register-label">Program Counter</div>
+                            <div class="register-value">
+                                <span class="ternary-value">0</span>
+                                <span class="decimal-value">(0)</span>
+                            </div>
+                        </div>
+                        <div class="register-item" id="registerIR">
+                            <div class="register-label">Instruction Register</div>
+                            <div class="register-value">
+                                <span class="ternary-value">0</span>
+                                <span class="decimal-value">(0)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="tabs">
+                        <button class="tab-btn active" data-tab="memory">Memory</button>
+                        <button class="tab-btn" data-tab="help">Help</button>
+                    </div>
+                    
+                    <div id="memoryTab" class="tab-content active">
+                        <div class="memory-viewer" id="memoryViewer">
+                            <!-- Memory cells will be dynamically populated -->
+                        </div>
+                    </div>
+                    
+                    <div id="helpTab" class="tab-content hidden">
+                        <div class="help-content">
+                            <h3>Balanced Ternary</h3>
+                            <p>Setun uses balanced ternary: <strong>−</strong> (−1), <strong>0</strong> (0), <strong>+</strong> (+1)</p>
+                            <h3>Instructions</h3>
+                            <ul>
+                                <li><strong>Run:</strong> Execute program continuously</li>
+                                <li><strong>Step:</strong> Execute one instruction</li>
+                                <li><strong>Pause:</strong> Pause running program</li>
+                                <li><strong>Reset:</strong> Clear all state</li>
+                            </ul>
+                            <h3>Example Programs</h3>
+                            <p>Select from the dropdown to load example programs demonstrating ternary operations.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="setun.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
