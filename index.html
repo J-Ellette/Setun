@@ -25,18 +25,20 @@
                         <div class="editor-controls">
                             <select id="examplesSelect" class="examples-dropdown">
                                 <option value="">Load Example...</option>
-                                <option value="addition">Addition</option>
-                                <option value="multiplication">Multiplication</option>
-                                <option value="conditional">Conditional</option>
                             </select>
                             <button id="saveBtn" class="btn btn-secondary" title="Save Program">
                                 <span class="icon">💾</span>
                             </button>
                         </div>
                     </div>
-                    <textarea id="programEditor" class="program-editor" placeholder="Enter your Setun program here...
+                    <div class="code-editor-wrapper">
+                        <div class="line-numbers" id="lineNumbers"></div>
+                        <textarea id="programEditor" class="program-editor" placeholder="Enter your Setun program here...
 Use balanced ternary: - (minus/−1), 0 (zero), + (plus/+1)
-Example: +0- means +1, 0, -1"></textarea>
+Example: +0- means +1, 0, -1" spellcheck="false"></textarea>
+                        <div class="syntax-highlight-overlay" id="syntaxHighlight"></div>
+                        <div id="autocomplete" class="autocomplete-dropdown hidden"></div>
+                    </div>
                     <div id="syntaxError" class="error-message hidden"></div>
                 </div>
 
@@ -49,7 +51,10 @@ Example: +0- means +1, 0, -1"></textarea>
                         <button id="stepBtn" class="btn btn-primary" title="Step One Instruction">
                             <span class="icon">→</span> Step
                         </button>
-                        <button id="pauseBtn" class="btn btn-secondary hidden" title="Pause Execution">
+                        <button id="stepBackBtn" class="btn btn-primary" title="Step Back (Undo Last Instruction)">
+                            <span class="icon">←</span> Back
+                        </button>
+                        <button id="pauseBtn" class="btn btn-warning hidden" title="Pause Execution">
                             <span class="icon">⏸</span> Pause
                         </button>
                         <button id="resetBtn" class="btn btn-secondary" title="Reset Computer">
@@ -99,9 +104,84 @@ Example: +0- means +1, 0, -1"></textarea>
                 </div>
 
                 <div class="card">
+                    <h2>Call Stack</h2>
+                    <div class="call-stack-viewer" id="callStackViewer">
+                        <div class="empty-state">Empty</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Breakpoints</h2>
+                    <div class="breakpoint-controls">
+                        <input type="number" id="breakpointAddress" placeholder="Address" min="0" class="breakpoint-input">
+                        <button id="addBreakpointBtn" class="btn btn-secondary btn-small">Add</button>
+                        <button id="clearBreakpointsBtn" class="btn btn-secondary btn-small">Clear All</button>
+                    </div>
+                    <div class="breakpoint-list" id="breakpointList">
+                        <div class="empty-state">No breakpoints</div>
+                    </div>
+                    
+                    <h3 style="margin-top: 16px; font-size: 14px;">Conditional</h3>
+                    <div class="conditional-breakpoint-controls">
+                        <select id="conditionType" class="condition-select">
+                            <option value="accumulator">Accumulator</option>
+                            <option value="memory">Memory</option>
+                        </select>
+                        <input type="number" id="conditionAddress" placeholder="Addr" class="condition-input" disabled>
+                        <select id="conditionOperator" class="condition-select">
+                            <option value="==">==</option>
+                            <option value="!=">!=</option>
+                            <option value=">">></option>
+                            <option value="<"><</option>
+                            <option value=">=">>=</option>
+                            <option value="<="><=</option>
+                        </select>
+                        <input type="number" id="conditionValue" placeholder="Value" class="condition-input">
+                        <button id="addConditionBtn" class="btn btn-secondary btn-small">Add</button>
+                    </div>
+                    <div class="conditional-breakpoint-list" id="conditionalBreakpointList">
+                        <div class="empty-state">No conditions</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Watch Expressions</h2>
+                    <div class="watch-controls">
+                        <select id="watchType" class="watch-type-select">
+                            <option value="accumulator">Accumulator</option>
+                            <option value="memory">Memory</option>
+                        </select>
+                        <input type="number" id="watchAddress" placeholder="Address" class="watch-input" disabled>
+                        <input type="text" id="watchLabel" placeholder="Label" class="watch-input">
+                        <button id="addWatchBtn" class="btn btn-secondary btn-small">Add</button>
+                    </div>
+                    <div class="watch-list" id="watchList">
+                        <div class="empty-state">No watches</div>
+                    </div>
+                    <div class="watch-info">
+                        <span id="historyStatus">History: <strong id="historySize">0</strong> states</span>
+                    </div>
+                </div>
+
+                <div class="card">
                     <div class="tabs">
                         <button class="tab-btn active" data-tab="memory">Memory</button>
                         <button class="tab-btn" data-tab="help">Help</button>
+                    </div>
+                    <div class="memory-controls">
+                        <label for="memoryViewMode">View:</label>
+                        <select id="memoryViewMode" class="view-mode-select">
+                            <option value="ternary">Ternary</option>
+                            <option value="decimal">Decimal</option>
+                            <option value="hex">Hexadecimal</option>
+                            <option value="mixed" selected>Mixed</option>
+                        </select>
+                        <label for="memorySizeSelect">Size:</label>
+                        <select id="memorySizeSelect" class="memory-size-select">
+                            <option value="27">27 words (3³)</option>
+                            <option value="81" selected>81 words (3⁴)</option>
+                            <option value="243">243 words (3⁵)</option>
+                        </select>
                     </div>
                     
                     <div id="memoryTab" class="tab-content active">
@@ -114,15 +194,37 @@ Example: +0- means +1, 0, -1"></textarea>
                         <div class="help-content">
                             <h3>Balanced Ternary</h3>
                             <p>Setun uses balanced ternary: <strong>−</strong> (−1), <strong>0</strong> (0), <strong>+</strong> (+1)</p>
+                            
                             <h3>Instructions</h3>
                             <ul>
-                                <li><strong>Run:</strong> Execute program continuously</li>
-                                <li><strong>Step:</strong> Execute one instruction</li>
-                                <li><strong>Pause:</strong> Pause running program</li>
-                                <li><strong>Reset:</strong> Clear all state</li>
+                                <li><strong>0:</strong> HALT - Stop execution</li>
+                                <li><strong>+:</strong> ADD - Add next value to accumulator</li>
+                                <li><strong>−:</strong> SUB - Subtract next value from accumulator</li>
+                                <li><strong>+−:</strong> LOAD - Load from memory address</li>
+                                <li><strong>−+:</strong> STORE - Store to memory address</li>
+                                <li><strong>+0:</strong> JMP - Unconditional jump</li>
+                                <li><strong>++:</strong> JZ - Jump if zero</li>
+                                <li><strong>−−:</strong> JNZ - Jump if not zero</li>
+                                <li><strong>+−−:</strong> JNP - Jump if positive</li>
+                                <li><strong>+−0:</strong> SHL - Shift left (×3)</li>
+                                <li><strong>−+0:</strong> SHR - Shift right (÷3)</li>
+                                <li><strong>+−+:</strong> CALL - Call subroutine</li>
+                                <li><strong>−+−:</strong> RET - Return from subroutine</li>
+                                <li><strong>+0−:</strong> NEG - Negate accumulator</li>
+                                <li><strong>+00:</strong> INC - Increment accumulator</li>
+                                <li><strong>−00:</strong> DEC - Decrement accumulator</li>
                             </ul>
+                            
+                            <h3>Controls</h3>
+                            <ul>
+                                <li><strong>Run (F5):</strong> Execute program continuously</li>
+                                <li><strong>Step (F10):</strong> Execute one instruction</li>
+                                <li><strong>Pause (F6):</strong> Pause running program</li>
+                                <li><strong>Reset (Ctrl+R):</strong> Clear all state</li>
+                            </ul>
+                            
                             <h3>Example Programs</h3>
-                            <p>Select from the dropdown to load example programs demonstrating ternary operations.</p>
+                            <p>Select from the dropdown to load example programs demonstrating the instruction set.</p>
                         </div>
                     </div>
                 </div>
