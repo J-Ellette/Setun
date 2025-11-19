@@ -29,6 +29,14 @@ class SetunEmulator {
         // Watch expressions
         this.watches = []; // {type: 'memory'|'accumulator', address?: number, label?: string}
         
+        // Memory protection
+        this.protectedMemory = new Set(); // Addresses that are read-only
+        
+        // Memory access tracking for heatmap
+        this.memoryAccessCounts = new Array(this.memorySize);
+        this.memoryAccessCounts.fill(0);
+        this.heatmapEnabled = false;
+        
         // Execution state
         this.running = false;
         this.instructionCount = 0;
@@ -52,7 +60,9 @@ class SetunEmulator {
             RET: -7,      // -+- - Return from subroutine
             NEG: 8,       // +0- - Negate accumulator
             INC: 9,       // +00 - Increment accumulator
-            DEC: -9       // -00 - Decrement accumulator
+            DEC: -9,      // -00 - Decrement accumulator
+            LOADI: 10,    // ++- - Load indirect from memory
+            STOREI: -10   // --+ - Store indirect to memory
         };
         
         // Callbacks
@@ -177,6 +187,7 @@ class SetunEmulator {
         this.instructionCount = 0;
         this.hitBreakpoint = false;
         this.clearHistory();
+        this.memoryAccessCounts.fill(0); // Reset heatmap
         // Note: breakpoints and watches are NOT cleared on reset - they persist
         
         if (this.onStateChange) {
@@ -232,6 +243,9 @@ class SetunEmulator {
                     const addr = this.memory[this.programCounter];
                     if (addr >= 0 && addr < this.memory.length) {
                         this.accumulator = this.memory[addr];
+                        if (this.heatmapEnabled) {
+                            this.memoryAccessCounts[addr]++;
+                        }
                     }
                 }
                 break;
@@ -242,7 +256,14 @@ class SetunEmulator {
                 if (this.programCounter < this.memory.length) {
                     const addr = this.memory[this.programCounter];
                     if (addr >= 0 && addr < this.memory.length) {
-                        this.memory[addr] = this.accumulator;
+                        if (this.canWriteToMemory(addr)) {
+                            this.memory[addr] = this.accumulator;
+                            if (this.heatmapEnabled) {
+                                this.memoryAccessCounts[addr]++;
+                            }
+                        } else {
+                            throw new Error(`Cannot write to protected memory address ${addr}`);
+                        }
                     }
                 }
                 break;
@@ -351,6 +372,44 @@ class SetunEmulator {
             case this.OPCODES.DEC:
                 // Decrement accumulator
                 this.accumulator--;
+                break;
+                
+            case this.OPCODES.LOADI:
+                // Load indirect - next cell contains address of address
+                this.programCounter++;
+                if (this.programCounter < this.memory.length) {
+                    const pointerAddr = this.memory[this.programCounter];
+                    if (pointerAddr >= 0 && pointerAddr < this.memory.length) {
+                        const actualAddr = this.memory[pointerAddr];
+                        if (actualAddr >= 0 && actualAddr < this.memory.length) {
+                            this.accumulator = this.memory[actualAddr];
+                            if (this.heatmapEnabled) {
+                                this.memoryAccessCounts[actualAddr]++;
+                            }
+                        }
+                    }
+                }
+                break;
+                
+            case this.OPCODES.STOREI:
+                // Store indirect - next cell contains address of address
+                this.programCounter++;
+                if (this.programCounter < this.memory.length) {
+                    const pointerAddr = this.memory[this.programCounter];
+                    if (pointerAddr >= 0 && pointerAddr < this.memory.length) {
+                        const actualAddr = this.memory[pointerAddr];
+                        if (actualAddr >= 0 && actualAddr < this.memory.length) {
+                            if (this.canWriteToMemory(actualAddr)) {
+                                this.memory[actualAddr] = this.accumulator;
+                                if (this.heatmapEnabled) {
+                                    this.memoryAccessCounts[actualAddr]++;
+                                }
+                            } else {
+                                throw new Error(`Cannot write to protected memory address ${actualAddr}`);
+                            }
+                        }
+                    }
+                }
                 break;
                 
             default:
@@ -701,6 +760,57 @@ class SetunEmulator {
             }
         }
         return null;
+    }
+    
+    /**
+     * Memory protection methods
+     */
+    protectMemoryRange(startAddr, endAddr) {
+        for (let addr = startAddr; addr <= endAddr; addr++) {
+            if (addr >= 0 && addr < this.memory.length) {
+                this.protectedMemory.add(addr);
+            }
+        }
+    }
+    
+    unprotectMemoryRange(startAddr, endAddr) {
+        for (let addr = startAddr; addr <= endAddr; addr++) {
+            this.protectedMemory.delete(addr);
+        }
+    }
+    
+    isMemoryProtected(addr) {
+        return this.protectedMemory.has(addr);
+    }
+    
+    clearMemoryProtection() {
+        this.protectedMemory.clear();
+    }
+    
+    /**
+     * Check if write to memory address is allowed
+     */
+    canWriteToMemory(addr) {
+        if (addr < 0 || addr >= this.memory.length) {
+            return false;
+        }
+        return !this.protectedMemory.has(addr);
+    }
+    
+    /**
+     * Memory heatmap methods
+     */
+    toggleHeatmap() {
+        this.heatmapEnabled = !this.heatmapEnabled;
+        return this.heatmapEnabled;
+    }
+    
+    clearHeatmap() {
+        this.memoryAccessCounts.fill(0);
+    }
+    
+    getMaxAccessCount() {
+        return Math.max(...this.memoryAccessCounts);
     }
 }
 

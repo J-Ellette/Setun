@@ -5,37 +5,37 @@ This document outlines potential improvements and feature additions to make the 
 ## 🎯 Core Functionality Enhancements
 
 ### Instruction Set Architecture
-- **Expand instruction set**: Implement a more complete Setun instruction set based on historical documentation
+- **(COMPLETE) Expand instruction set**: Implement a more complete Setun instruction set based on historical documentation
   - Memory load/store operations
   - Conditional branching (jump if negative, zero, positive)
   - Shift operations (ternary shifts)
   - Logical operations specific to balanced ternary
-- **Subroutine support**: Add call/return mechanisms for modular programming
-- **Indirect addressing**: Allow memory references through pointers
+- **(COMPLETE) Subroutine support**: Add call/return mechanisms for modular programming
+- **(COMPLETE) Indirect addressing**: Allow memory references through pointers
 
 ### Memory and Storage
-- **Increase memory capacity**: Expand beyond 27 words (consider 81, 243, or even 729 words)
-- **Memory visualization modes**: Add different views (hex, decimal, ternary, ASCII mapping)
-- **Memory protection**: Implement read-only regions for program vs. data separation
-- **Persistent storage**: Save/load memory dumps to/from files
-- **Memory watch points**: Set breakpoints on memory address changes
+- **(COMPLETE) Increase memory capacity**: Expand beyond 27 words (consider 81, 243, or even 729 words)
+- **(COMPLETE) Memory visualization modes**: Add different views (hex, decimal, ternary, ASCII mapping)
+- **(COMPLETE) Memory protection**: Implement read-only regions for program vs. data separation
+- **(COMPLETE) Persistent storage**: Save/load memory dumps to/from files
+- **(COMPLETE) Memory watch points**: Set breakpoints on memory address changes
 
 ## 💻 Development Tools
 
 ### Debugging Features
-- **Breakpoints**: Set breakpoints at specific memory addresses
-- **Conditional breakpoints**: Pause when accumulator or memory reaches certain values
-- **Step backwards**: Add reverse execution capability for debugging
-- **Watch expressions**: Monitor specific memory locations or expressions in real-time
-- **Execution history**: Record and visualize execution trace
-- **Stack visualization**: If implementing subroutines, show call stack
+- **(COMPLETE) Breakpoints**: Set breakpoints at specific memory addresses
+- **(COMPLETE) Conditional breakpoints**: Pause when accumulator or memory reaches certain values
+- **(COMPLETE) Step backwards**: Add reverse execution capability for debugging
+- **(COMPLETE) Watch expressions**: Monitor specific memory locations or expressions in real-time
+- **(COMPLETE) Execution history**: Record and visualize execution trace
+- **(COMPLETE) Stack visualization**: If implementing subroutines, show call stack
 
 ### Editor Improvements
-- **Syntax highlighting**: Color-code ternary digits, comments, and labels
-- **Line numbers**: Add line numbering to the editor
-- **Code folding**: Allow collapsing sections of code
-- **Autocomplete**: Suggest instruction mnemonics and labels
-- **Error highlighting**: Inline error indicators with tooltips
+- **(COMPLETE) Syntax highlighting**: Color-code ternary digits, comments, and labels
+- **(COMPLETE) Line numbers**: Add line numbering to the editor
+- **(COMPLETE) Code folding**: Allow collapsing sections of code
+- **(COMPLETE) Autocomplete**: Suggest instruction mnemonics and labels
+- **(COMPLETE) Error highlighting**: Inline error indicators with tooltips
 - **Multiple files**: Support for multi-file projects with includes
 
 ### Assembly Language
@@ -53,13 +53,13 @@ This document outlines potential improvements and feature additions to make the 
 - **Datapath animation**: Show data flowing between components during execution
 - **Pipeline visualization**: If implementing pipelining, show instruction stages
 - **3D ternary visualization**: Use color gradients to represent -1, 0, +1 states
-- **Memory heatmap**: Show memory access frequency with color intensity
+- **(COMPLETE) Memory heatmap**: Show memory access frequency with color intensity
 - **Graph view**: Plot accumulator or memory values over time
 
 ### UI Improvements
 - **Dark/light theme toggle**: Support both retro and modern aesthetics
 - **Responsive design**: Better mobile/tablet support
-- **Keyboard shortcuts**: Add shortcuts for common operations (F5=run, F10=step, etc.)
+- **(COMPLETE) Keyboard shortcuts**: Add shortcuts for common operations (F5=run, F10=step, etc.)
 - **Split-screen mode**: Show code and memory side-by-side
 - **Floating panels**: Draggable, resizable panels for customizable layout
 - **Full-screen mode**: Distraction-free coding experience

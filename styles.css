@@ -279,6 +279,53 @@ h3 {
     font-style: italic;
 }
 
+/* Error Highlighting */
+.error-indicator {
+    color: #ff5555;
+    cursor: pointer;
+    font-size: 14px;
+    margin-left: 4px;
+    position: relative;
+}
+
+.error-indicator:hover {
+    color: #ff7777;
+}
+
+.error-tooltip {
+    position: absolute;
+    background-color: #ff5555;
+    color: var(--color-primary);
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 2000;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.6);
+    left: 50%;
+    transform: translateX(-50%);
+    top: 20px;
+    display: none;
+    font-family: var(--font-primary);
+    font-weight: 500;
+    max-width: 300px;
+    white-space: normal;
+}
+
+.error-indicator:hover .error-tooltip {
+    display: block;
+}
+
+.line-number-error {
+    background-color: rgba(255, 85, 85, 0.2);
+    border-left: 3px solid #ff5555;
+    padding-left: 2px;
+}
+
+.editor-line-error {
+    background-color: rgba(255, 85, 85, 0.1);
+}
+
 /* Editor Controls */
 .editor-controls {
     display: flex;
@@ -732,6 +779,102 @@ h3 {
     border-color: var(--color-accent);
 }
 
+/* Memory Protection Controls */
+.memory-protection-controls {
+    display: flex;
+    gap: var(--gap-2);
+    margin-bottom: var(--gap-3);
+    flex-wrap: wrap;
+    align-items: center;
+    padding-top: var(--gap-2);
+    border-top: 1px solid var(--color-secondary);
+}
+
+.protect-input {
+    width: 60px;
+    background-color: var(--color-primary);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-secondary);
+    border-radius: 4px;
+    padding: 6px 8px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+}
+
+.protect-input:focus {
+    outline: none;
+    border-color: var(--color-accent);
+}
+
+.memory-cell.protected {
+    border: 2px solid #ff9500;
+    background-color: rgba(255, 149, 0, 0.15);
+}
+
+.memory-cell.protected::after {
+    content: '🔒';
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    font-size: 10px;
+    opacity: 0.7;
+}
+
+/* Memory Heatmap Controls */
+.memory-heatmap-controls {
+    display: flex;
+    gap: var(--gap-2);
+    margin-bottom: var(--gap-3);
+    flex-wrap: wrap;
+    padding-top: var(--gap-2);
+    border-top: 1px solid var(--color-secondary);
+}
+
+/* Heatmap gradient colors */
+.memory-cell.heat-0 {
+    background-color: var(--color-primary);
+}
+
+.memory-cell.heat-1 {
+    background-color: rgba(59, 130, 246, 0.2); /* Blue */
+}
+
+.memory-cell.heat-2 {
+    background-color: rgba(59, 130, 246, 0.4);
+}
+
+.memory-cell.heat-3 {
+    background-color: rgba(34, 197, 94, 0.3); /* Green */
+}
+
+.memory-cell.heat-4 {
+    background-color: rgba(34, 197, 94, 0.5);
+}
+
+.memory-cell.heat-5 {
+    background-color: rgba(234, 179, 8, 0.3); /* Yellow */
+}
+
+.memory-cell.heat-6 {
+    background-color: rgba(234, 179, 8, 0.5);
+}
+
+.memory-cell.heat-7 {
+    background-color: rgba(249, 115, 22, 0.3); /* Orange */
+}
+
+.memory-cell.heat-8 {
+    background-color: rgba(249, 115, 22, 0.5);
+}
+
+.memory-cell.heat-9 {
+    background-color: rgba(239, 68, 68, 0.3); /* Red */
+}
+
+.memory-cell.heat-10 {
+    background-color: rgba(239, 68, 68, 0.6); /* Hot red */
+}
+
 .watch-list {
     max-height: 150px;
     overflow-y: auto;
@@ -938,3 +1081,20 @@ h3 {
 .memory-viewer::-webkit-scrollbar-thumb:hover {
     background: var(--color-muted);
 }
+
+/* Keyboard Shortcut Indicators */
+kbd {
+    display: inline-block;
+    padding: 2px 6px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1.4;
+    color: var(--color-text-primary);
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-secondary);
+    border-radius: 3px;
+    box-shadow: 0 1px 0 var(--color-secondary);
+    white-space: nowrap;
+    margin-left: 4px;
+}
+

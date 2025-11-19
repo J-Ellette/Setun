@@ -29,6 +29,13 @@
                             <button id="saveBtn" class="btn btn-secondary" title="Save Program">
                                 <span class="icon">💾</span>
                             </button>
+                            <button id="exportMemoryBtn" class="btn btn-secondary" title="Export Memory State">
+                                <span class="icon">📤</span>
+                            </button>
+                            <button id="importMemoryBtn" class="btn btn-secondary" title="Import Memory State">
+                                <span class="icon">📥</span>
+                            </button>
+                            <input type="file" id="importMemoryFile" accept=".json" style="display: none;">
                         </div>
                     </div>
                     <div class="code-editor-wrapper">
@@ -178,10 +185,21 @@ Example: +0- means +1, 0, -1" spellcheck="false"></textarea>
                         </select>
                         <label for="memorySizeSelect">Size:</label>
                         <select id="memorySizeSelect" class="memory-size-select">
-                            <option value="27">27 words (3³)</option>
-                            <option value="81" selected>81 words (3⁴)</option>
-                            <option value="243">243 words (3⁵)</option>
+                            <option value="27">27</option>
+                            <option value="81" selected>81</option>
+                            <option value="243">243</option>
                         </select>
+                    </div>
+                    <div class="memory-protection-controls">
+                        <input type="number" id="protectStart" placeholder="Start" class="protect-input" min="0">
+                        <input type="number" id="protectEnd" placeholder="End" class="protect-input" min="0">
+                        <button id="protectBtn" class="btn btn-secondary btn-small">Protect</button>
+                        <button id="unprotectBtn" class="btn btn-secondary btn-small">Unprotect</button>
+                        <button id="clearProtectionBtn" class="btn btn-secondary btn-small">Clear All</button>
+                    </div>
+                    <div class="memory-heatmap-controls">
+                        <button id="toggleHeatmapBtn" class="btn btn-secondary btn-small">🔥 Heatmap: OFF</button>
+                        <button id="clearHeatmapBtn" class="btn btn-secondary btn-small">Clear Heatmap</button>
                     </div>
                     
                     <div id="memoryTab" class="tab-content active">
@@ -217,10 +235,20 @@ Example: +0- means +1, 0, -1" spellcheck="false"></textarea>
                             
                             <h3>Controls</h3>
                             <ul>
-                                <li><strong>Run (F5):</strong> Execute program continuously</li>
-                                <li><strong>Step (F10):</strong> Execute one instruction</li>
-                                <li><strong>Pause (F6):</strong> Pause running program</li>
-                                <li><strong>Reset (Ctrl+R):</strong> Clear all state</li>
+                                <li><strong>Run:</strong> Execute program continuously <kbd>F5</kbd></li>
+                                <li><strong>Step:</strong> Execute one instruction <kbd>F10</kbd></li>
+                                <li><strong>Pause:</strong> Pause running program <kbd>F8</kbd></li>
+                                <li><strong>Reset:</strong> Clear all state <kbd>Ctrl+R</kbd></li>
+                                <li><strong>Save:</strong> Save program to browser <kbd>Ctrl+S</kbd></li>
+                                <li><strong>Toggle Breakpoint:</strong> At cursor line <kbd>F9</kbd></li>
+                            </ul>
+                            
+                            <h3>Editor Features</h3>
+                            <ul>
+                                <li><strong>Autocomplete:</strong> Type instruction names for suggestions</li>
+                                <li><strong>Line Numbers:</strong> Click numbers to view</li>
+                                <li><strong>Code Folding:</strong> Use <code>; FOLD</code> and <code>; ENDFOLD</code> markers</li>
+                                <li><strong>Error Indicators:</strong> Hover over ⚠ for details</li>
                             </ul>
                             
                             <h3>Example Programs</h3>

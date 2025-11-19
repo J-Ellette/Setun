@@ -60,7 +60,17 @@ class SetunApp {
             historySize: document.getElementById('historySize'),
             registerACC: document.getElementById('registerACC'),
             registerPC: document.getElementById('registerPC'),
-            registerIR: document.getElementById('registerIR')
+            registerIR: document.getElementById('registerIR'),
+            protectStart: document.getElementById('protectStart'),
+            protectEnd: document.getElementById('protectEnd'),
+            protectBtn: document.getElementById('protectBtn'),
+            unprotectBtn: document.getElementById('unprotectBtn'),
+            clearProtectionBtn: document.getElementById('clearProtectionBtn'),
+            exportMemoryBtn: document.getElementById('exportMemoryBtn'),
+            importMemoryBtn: document.getElementById('importMemoryBtn'),
+            importMemoryFile: document.getElementById('importMemoryFile'),
+            toggleHeatmapBtn: document.getElementById('toggleHeatmapBtn'),
+            clearHeatmapBtn: document.getElementById('clearHeatmapBtn')
         };
         
         // Memory view state
@@ -77,6 +87,9 @@ class SetunApp {
         
         // Code folding state
         this.foldedRegions = new Set();
+        
+        // Error tracking
+        this.lineErrors = new Map(); // Map of line number to error message
         
         // Opcode definitions for autocomplete
         this.opcodeInfo = [
@@ -95,7 +108,9 @@ class SetunApp {
             { mnemonic: 'RET', ternary: '-+-', decimal: -7, description: 'Return from subroutine' },
             { mnemonic: 'NEG', ternary: '+0-', decimal: 8, description: 'Negate accumulator value' },
             { mnemonic: 'INC', ternary: '+00', decimal: 9, description: 'Increment accumulator by 1' },
-            { mnemonic: 'DEC', ternary: '-00', decimal: -9, description: 'Decrement accumulator by 1' }
+            { mnemonic: 'DEC', ternary: '-00', decimal: -9, description: 'Decrement accumulator by 1' },
+            { mnemonic: 'LOADI', ternary: '++-', decimal: 10, description: 'Load indirect from memory pointer' },
+            { mnemonic: 'STOREI', ternary: '--+', decimal: -10, description: 'Store indirect to memory pointer' }
         ];
         
         // Attach event listeners
@@ -137,10 +152,27 @@ class SetunApp {
             if (e.key === 'Enter') this.addWatch();
         });
         
+        // Memory protection event listeners
+        this.elements.protectBtn.addEventListener('click', () => this.protectMemory());
+        this.elements.unprotectBtn.addEventListener('click', () => this.unprotectMemory());
+        this.elements.clearProtectionBtn.addEventListener('click', () => this.clearMemoryProtection());
+        
+        // Persistent storage event listeners
+        this.elements.exportMemoryBtn.addEventListener('click', () => this.exportMemoryState());
+        this.elements.importMemoryBtn.addEventListener('click', () => this.elements.importMemoryFile.click());
+        this.elements.importMemoryFile.addEventListener('change', (e) => this.importMemoryState(e));
+        
+        // Heatmap event listeners
+        this.elements.toggleHeatmapBtn.addEventListener('click', () => this.toggleHeatmap());
+        this.elements.clearHeatmapBtn.addEventListener('click', () => this.clearHeatmap());
+        
         // Tab switching
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', (e) => this.switchTab(e.target.dataset.tab));
         });
+        
+        // Global keyboard shortcuts
+        document.addEventListener('keydown', (e) => this.handleKeyboardShortcuts(e));
         
         // Setup Electron menu handlers if running in Electron
         if (window.electronAPI) {
@@ -199,29 +231,62 @@ class SetunApp {
     
     validateSyntax() {
         const code = this.elements.editor.value.trim();
+        this.lineErrors.clear();
         
         if (code.length === 0) {
             this.elements.syntaxError.classList.add('hidden');
             this.elements.runBtn.disabled = true;
             this.elements.stepBtn.disabled = true;
+            this.updateLineNumbers(); // Update to clear error indicators
             return true;
         }
         
-        const tokens = code.split(/\s+/);
+        const lines = code.split('\n');
+        let hasError = false;
+        let firstError = null;
         
-        for (let i = 0; i < tokens.length; i++) {
-            if (!SetunEmulator.validateTernary(tokens[i])) {
-                this.elements.syntaxError.textContent = `Invalid ternary at token ${i + 1}: "${tokens[i]}"`;
-                this.elements.syntaxError.classList.remove('hidden');
-                this.elements.runBtn.disabled = true;
-                this.elements.stepBtn.disabled = true;
-                return false;
+        for (let lineNum = 0; lineNum < lines.length; lineNum++) {
+            const line = lines[lineNum].trim();
+            
+            // Skip empty lines and comments
+            if (line.length === 0 || line.startsWith(';')) {
+                continue;
             }
+            
+            const tokens = line.split(/\s+/);
+            
+            for (let i = 0; i < tokens.length; i++) {
+                const token = tokens[i];
+                
+                // Skip comments within line
+                if (token.startsWith(';')) break;
+                
+                if (!SetunEmulator.validateTernary(token)) {
+                    const errorMsg = `Invalid ternary: "${token}"`;
+                    this.lineErrors.set(lineNum, errorMsg);
+                    hasError = true;
+                    
+                    if (!firstError) {
+                        firstError = `Line ${lineNum + 1}: ${errorMsg}`;
+                    }
+                    break; // Only report first error per line
+                }
+            }
+        }
+        
+        if (hasError) {
+            this.elements.syntaxError.textContent = firstError;
+            this.elements.syntaxError.classList.remove('hidden');
+            this.elements.runBtn.disabled = true;
+            this.elements.stepBtn.disabled = true;
+            this.updateLineNumbers(); // Update to show error indicators
+            return false;
         }
         
         this.elements.syntaxError.classList.add('hidden');
         this.elements.runBtn.disabled = false;
         this.elements.stepBtn.disabled = false;
+        this.updateLineNumbers(); // Update to clear error indicators
         return true;
     }
     
@@ -477,6 +542,18 @@ class SetunApp {
                 
                 if (state.breakpoints.has(i)) {
                     cell.classList.add('breakpoint');
+                }
+                
+                if (state.protectedMemory && state.protectedMemory.has(i)) {
+                    cell.classList.add('protected');
+                }
+                
+                // Add heatmap coloring
+                if (this.emulator.heatmapEnabled && this.emulator.memoryAccessCounts[i] > 0) {
+                    const maxAccess = this.emulator.getMaxAccessCount();
+                    const accessRatio = maxAccess > 0 ? this.emulator.memoryAccessCounts[i] / maxAccess : 0;
+                    const heatLevel = Math.min(10, Math.floor(accessRatio * 10) + 1);
+                    cell.classList.add(`heat-${heatLevel}`);
                 }
                 
                 if (this.changedMemory.has(i)) {
@@ -770,7 +847,7 @@ class SetunApp {
     }
     
     /**
-     * Update line numbers in the editor with fold indicators
+     * Update line numbers in the editor with fold indicators and error markers
      */
     updateLineNumbers() {
         const lines = this.elements.editor.value.split('\n');
@@ -788,7 +865,16 @@ class SetunApp {
                 foldIndicator = `<span class="fold-indicator" data-line="${index}">${icon}</span>`;
             }
             
-            return `<div>${foldIndicator}${index + 1}</div>`;
+            // Check for errors on this line
+            let errorIndicator = '';
+            let lineNumberClass = '';
+            if (this.lineErrors.has(index)) {
+                const errorMsg = this.lineErrors.get(index);
+                errorIndicator = `<span class="error-indicator" title="${errorMsg}">⚠<span class="error-tooltip">${errorMsg}</span></span>`;
+                lineNumberClass = ' line-number-error';
+            }
+            
+            return `<div class="${lineNumberClass}">${foldIndicator}${index + 1}${errorIndicator}</div>`;
         }).join('');
         
         this.elements.lineNumbers.innerHTML = lineNumbersHtml;
@@ -1053,6 +1139,280 @@ class SetunApp {
         }
         
         this.hideAutocomplete();
+    }
+    
+    /**
+     * Memory protection methods
+     */
+    protectMemory() {
+        const start = parseInt(this.elements.protectStart.value);
+        const end = parseInt(this.elements.protectEnd.value);
+        
+        if (isNaN(start) || isNaN(end)) {
+            alert('Please enter valid start and end addresses');
+            return;
+        }
+        
+        if (start < 0 || end >= this.emulator.memory.length || start > end) {
+            alert(`Addresses must be between 0 and ${this.emulator.memory.length - 1}, with start <= end`);
+            return;
+        }
+        
+        this.emulator.protectMemoryRange(start, end);
+        this.updateVisualization();
+        
+        // Clear inputs
+        this.elements.protectStart.value = '';
+        this.elements.protectEnd.value = '';
+    }
+    
+    unprotectMemory() {
+        const start = parseInt(this.elements.protectStart.value);
+        const end = parseInt(this.elements.protectEnd.value);
+        
+        if (isNaN(start) || isNaN(end)) {
+            alert('Please enter valid start and end addresses');
+            return;
+        }
+        
+        if (start < 0 || end >= this.emulator.memory.length || start > end) {
+            alert(`Addresses must be between 0 and ${this.emulator.memory.length - 1}, with start <= end`);
+            return;
+        }
+        
+        this.emulator.unprotectMemoryRange(start, end);
+        this.updateVisualization();
+        
+        // Clear inputs
+        this.elements.protectStart.value = '';
+        this.elements.protectEnd.value = '';
+    }
+    
+    clearMemoryProtection() {
+        this.emulator.clearMemoryProtection();
+        this.updateVisualization();
+    }
+    
+    /**
+     * Export memory state to JSON file
+     */
+    exportMemoryState() {
+        const state = {
+            version: '1.0',
+            timestamp: new Date().toISOString(),
+            memorySize: this.emulator.memorySize,
+            memory: this.emulator.memory,
+            accumulator: this.emulator.accumulator,
+            programCounter: this.emulator.programCounter,
+            instructionRegister: this.emulator.instructionRegister,
+            protectedMemory: Array.from(this.emulator.protectedMemory),
+            breakpoints: Array.from(this.emulator.breakpoints),
+            conditionalBreakpoints: this.emulator.conditionalBreakpoints,
+            watches: this.emulator.watches,
+            program: this.elements.editor.value
+        };
+        
+        const json = JSON.stringify(state, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `setun-memory-${Date.now()}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        // Visual feedback
+        const originalText = this.elements.exportMemoryBtn.innerHTML;
+        this.elements.exportMemoryBtn.innerHTML = '<span class="icon">✓</span>';
+        setTimeout(() => {
+            this.elements.exportMemoryBtn.innerHTML = originalText;
+        }, 1000);
+    }
+    
+    /**
+     * Import memory state from JSON file
+     */
+    importMemoryState(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const state = JSON.parse(e.target.result);
+                
+                // Validate the state object
+                if (!state.memory || !Array.isArray(state.memory)) {
+                    throw new Error('Invalid memory state file');
+                }
+                
+                // Reset and load state
+                this.pause();
+                this.emulator.reset();
+                
+                // Resize memory if needed
+                if (state.memorySize && state.memorySize !== this.emulator.memorySize) {
+                    this.changeMemorySize(state.memorySize);
+                }
+                
+                // Restore memory and registers
+                this.emulator.memory = [...state.memory];
+                if (state.accumulator !== undefined) {
+                    this.emulator.accumulator = state.accumulator;
+                }
+                if (state.programCounter !== undefined) {
+                    this.emulator.programCounter = state.programCounter;
+                }
+                if (state.instructionRegister !== undefined) {
+                    this.emulator.instructionRegister = state.instructionRegister;
+                }
+                
+                // Restore protected memory
+                if (state.protectedMemory && Array.isArray(state.protectedMemory)) {
+                    this.emulator.protectedMemory = new Set(state.protectedMemory);
+                }
+                
+                // Restore breakpoints
+                if (state.breakpoints && Array.isArray(state.breakpoints)) {
+                    this.emulator.breakpoints = new Set(state.breakpoints);
+                }
+                
+                // Restore conditional breakpoints
+                if (state.conditionalBreakpoints && Array.isArray(state.conditionalBreakpoints)) {
+                    this.emulator.conditionalBreakpoints = state.conditionalBreakpoints;
+                }
+                
+                // Restore watches
+                if (state.watches && Array.isArray(state.watches)) {
+                    this.emulator.watches = state.watches;
+                }
+                
+                // Restore program code
+                if (state.program) {
+                    this.elements.editor.value = state.program;
+                    this.validateSyntax();
+                    this.updateLineNumbers();
+                }
+                
+                this.updateVisualization();
+                
+                // Visual feedback
+                const originalText = this.elements.importMemoryBtn.innerHTML;
+                this.elements.importMemoryBtn.innerHTML = '<span class="icon">✓</span>';
+                setTimeout(() => {
+                    this.elements.importMemoryBtn.innerHTML = originalText;
+                }, 1000);
+                
+            } catch (error) {
+                alert(`Error importing memory state: ${error.message}`);
+            }
+            
+            // Reset file input
+            event.target.value = '';
+        };
+        
+        reader.readAsText(file);
+    }
+    
+    /**
+     * Handle global keyboard shortcuts
+     */
+    handleKeyboardShortcuts(e) {
+        // Don't trigger shortcuts when typing in input fields (except editor)
+        if (e.target.tagName === 'INPUT' && e.target.id !== 'programEditor') {
+            return;
+        }
+        
+        // Don't interfere with autocomplete navigation
+        if (this.autocompleteVisible && ['ArrowUp', 'ArrowDown', 'Enter', 'Tab', 'Escape'].includes(e.key)) {
+            return;
+        }
+        
+        switch (e.key) {
+            case 'F5':
+                e.preventDefault();
+                if (!this.emulator.running) {
+                    this.run();
+                }
+                break;
+                
+            case 'F8':
+                e.preventDefault();
+                if (this.emulator.running) {
+                    this.pause();
+                }
+                break;
+                
+            case 'F10':
+                e.preventDefault();
+                if (!this.emulator.running) {
+                    this.step();
+                }
+                break;
+                
+            case 'F9':
+                e.preventDefault();
+                this.toggleBreakpointAtCursor();
+                break;
+                
+            case 'r':
+                if (e.ctrlKey || e.metaKey) {
+                    e.preventDefault();
+                    this.reset();
+                }
+                break;
+                
+            case 's':
+                if (e.ctrlKey || e.metaKey) {
+                    e.preventDefault();
+                    this.saveProgram();
+                }
+                break;
+        }
+    }
+    
+    /**
+     * Toggle breakpoint at current cursor line in editor
+     */
+    toggleBreakpointAtCursor() {
+        const cursorPos = this.elements.editor.selectionStart;
+        const textBeforeCursor = this.elements.editor.value.substring(0, cursorPos);
+        const lineNumber = textBeforeCursor.split('\n').length - 1;
+        
+        // Calculate memory address for this line
+        // This is approximate - in reality would need proper parsing
+        const lines = this.elements.editor.value.split('\n');
+        let memAddr = 0;
+        
+        for (let i = 0; i < lineNumber && i < lines.length; i++) {
+            const tokens = lines[i].trim().split(/\s+/).filter(t => t && !t.startsWith(';'));
+            memAddr += tokens.length;
+        }
+        
+        if (memAddr < this.emulator.memory.length) {
+            this.emulator.toggleBreakpoint(memAddr);
+            this.updateVisualization();
+            this.updateBreakpointsList();
+        }
+    }
+    
+    /**
+     * Toggle memory access heatmap
+     */
+    toggleHeatmap() {
+        const enabled = this.emulator.toggleHeatmap();
+        this.elements.toggleHeatmapBtn.textContent = `🔥 Heatmap: ${enabled ? 'ON' : 'OFF'}`;
+        this.updateVisualization();
+    }
+    
+    /**
+     * Clear heatmap data
+     */
+    clearHeatmap() {
+        this.emulator.clearHeatmap();
+        this.updateVisualization();
     }
 }
 
